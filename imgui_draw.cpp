@@ -2093,6 +2093,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 static unsigned int stb_decompress_length(const unsigned char* input);
 static unsigned int stb_decompress(unsigned char* output, const unsigned char* input, unsigned int length);
 static const char*  GetDefaultCompressedFontDataTTFBase85();
+static const char* GetDummyFont();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned char* dst)
 {
@@ -2125,6 +2126,26 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, glyph_ranges);
     return font;
+}
+
+// Add a font with no backing data
+ImFont* ImFontAtlas::AddFontBlank(const ImFontConfig* font_cfg_template)
+{
+  ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
+  if (font_cfg.SizePixels <= 0.0f)
+    font_cfg.SizePixels = 13.0f * 1.0f;
+  if (font_cfg.Name[0] == '\0')
+    ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "<dummy>, %dpx", (int)font_cfg.SizePixels);
+  font_cfg.EllipsisChar = (ImWchar)0x0085;
+  font_cfg.GlyphOffset.y = 1.0f * IM_FLOOR(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
+
+  const char* dummy_font = GetDummyFont();
+  const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesNone();
+  font_cfg.FontDataOwnedByAtlas = true;
+  font_cfg.FontData = IM_ALLOC(1);
+  font_cfg.FontDataSize = 1;
+  ImFont* font = AddFont(&font_cfg);
+  return font;
 }
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
@@ -2814,6 +2835,16 @@ const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
     };
     return &ranges[0];
 }
+
+const ImWchar*   ImFontAtlas::GetGlyphRangesNone()
+{
+  static const ImWchar ranges[] =
+      {
+          0,
+      };
+  return &ranges[0];
+}
+
 
 const ImWchar*  ImFontAtlas::GetGlyphRangesKorean()
 {
@@ -4147,6 +4178,13 @@ static const char proggy_clean_ttf_compressed_data_base85[11980 + 1] =
 static const char* GetDefaultCompressedFontDataTTFBase85()
 {
     return proggy_clean_ttf_compressed_data_base85;
+}
+
+static const char dummy_font[1] = {0};
+
+static const char* GetDummyFont()
+{
+  return dummy_font;
 }
 
 #endif // #ifndef IMGUI_DISABLE
