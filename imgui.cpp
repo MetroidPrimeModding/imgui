@@ -2027,6 +2027,7 @@ void ImGuiStorage::SetAllInt(int v)
 // [SECTION] ImGuiTextFilter
 //-----------------------------------------------------------------------------
 
+#ifndef IMGUI_DISABLE_TEXT_INPUTS
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 {
@@ -2124,6 +2125,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 
     return false;
 }
+#endif
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiTextBuffer
@@ -11181,11 +11183,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #ifdef IMGUI_HAS_DOCK
 #endif // #ifdef IMGUI_HAS_DOCK
 
+#ifndef IMGUI_DISABLE_TEXT_INPUTS
         if (TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
         {
             InputTextMultiline("##Ini", (char*)(void*)g.SettingsIniData.c_str(), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, GetTextLineHeight() * 20), ImGuiInputTextFlags_ReadOnly);
             TreePop();
         }
+#endif
         TreePop();
     }
 
