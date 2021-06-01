@@ -2167,12 +2167,18 @@ struct ImGuiListClipper
 };
 
 // Helpers macros to generate 32-bit encoded colors
-#ifdef IMGUI_USE_BGRA_PACKED_COLOR
+#if defined(MGUI_USE_BGRA_PACKED_COLOR)
 #define IM_COL32_R_SHIFT    16
 #define IM_COL32_G_SHIFT    8
 #define IM_COL32_B_SHIFT    0
 #define IM_COL32_A_SHIFT    24
 #define IM_COL32_A_MASK     0xFF000000
+#elif defined(IMGUI_USE_ABGR_PACKED_COLOR)
+#define IM_COL32_R_SHIFT    24
+#define IM_COL32_G_SHIFT    16
+#define IM_COL32_B_SHIFT    8
+#define IM_COL32_A_SHIFT    0
+#define IM_COL32_A_MASK     0x000000FF
 #else
 #define IM_COL32_R_SHIFT    0
 #define IM_COL32_G_SHIFT    8
