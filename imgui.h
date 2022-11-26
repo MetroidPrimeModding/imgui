@@ -46,6 +46,10 @@ Index of this file:
 #include "imconfig.h"
 #endif
 
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((section(".imgui.text"))), apply_to=function)
+#endif
+
 #ifndef IMGUI_DISABLE
 
 //-----------------------------------------------------------------------------
@@ -2861,6 +2865,10 @@ enum ImDrawCornerFlags_
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
 #ifdef IMGUI_INCLUDE_IMGUI_USER_H
 #include "imgui_user.h"
+#endif
+
+#if defined(__clang__)
+#pragma clang attribute pop
 #endif
 
 #endif // #ifndef IMGUI_DISABLE

@@ -38,6 +38,10 @@ Index of this file:
 #pragma once
 #ifndef IMGUI_DISABLE
 
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((section(".imgui.text"))), apply_to=function)
+#endif
+
 //-----------------------------------------------------------------------------
 // [SECTION] Header mess
 //-----------------------------------------------------------------------------
@@ -2689,5 +2693,10 @@ extern void         ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, 
 #ifdef _MSC_VER
 #pragma warning (pop)
 #endif
+
+#if defined(__clang__)
+#pragma clang attribute pop
+#endif
+
 
 #endif // #ifndef IMGUI_DISABLE

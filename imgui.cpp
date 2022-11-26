@@ -771,6 +771,10 @@ CODE
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((section(".imgui.text"))), apply_to=function)
+#endif
+
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -11713,5 +11717,10 @@ void ImGui::DebugNodeViewport(ImGuiViewportP*) {}
 #endif
 
 //-----------------------------------------------------------------------------
+
+#if defined(__clang__)
+#pragma clang attribute pop
+#endif
+
 
 #endif // #ifndef IMGUI_DISABLE
