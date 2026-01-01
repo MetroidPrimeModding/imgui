@@ -1554,7 +1554,9 @@ struct ImGuiContext
     float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     int                     TooltipOverrideCount;
     float                   TooltipSlowDelay;                   // Time before slow tooltips appears (FIXME: This is temporary until we merge in tooltip timer+priority work)
+#ifndef IMGUI_DISABLE_CLIPBOARD
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
+#endif
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
 
     // Platform support
@@ -1573,6 +1575,7 @@ struct ImGuiContext
     ImGuiID                             HookIdNext;             // Next available HookId
 
     // Capture/Logging
+#ifndef IMGUI_DISABLE_LOG
     bool                    LogEnabled;                         // Currently capturing
     ImGuiLogType            LogType;                            // Capture target
     ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
@@ -1584,6 +1587,7 @@ struct ImGuiContext
     int                     LogDepthRef;
     int                     LogDepthToExpand;
     int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
+#endif
 
     // Debug Tools
     bool                    DebugItemPickerActive;              // Item picker is active (started with DebugStartItemPicker())
@@ -1727,7 +1731,7 @@ struct ImGuiContext
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
         HookIdNext = 0;
-
+#ifndef IMGUI_DISABLE_LOG
         LogEnabled = false;
         LogType = ImGuiLogType_None;
         LogNextPrefix = LogNextSuffix = NULL;
@@ -1736,6 +1740,7 @@ struct ImGuiContext
         LogLineFirstItem = false;
         LogDepthRef = 0;
         LogDepthToExpand = LogDepthToExpandDefault = 2;
+#endif
 
         DebugItemPickerActive = false;
         DebugItemPickerBreakId = 0;
@@ -2386,11 +2391,13 @@ namespace ImGui
     inline void FocusableItemUnregister(ImGuiWindow* window)            { IM_ASSERT(0); IM_UNUSED(window); }                              // -> unnecessary: TempInputText() uses ImGuiInputTextFlags_MergedItem
 #endif
 
+#ifndef IMGUI_DISABLE_LOG
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);           // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
     IMGUI_API void          LogToBuffer(int auto_open_depth = -1);                      // Start logging/capturing to internal buffer
     IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL);
     IMGUI_API void          LogSetNextTextDecoration(const char* prefix, const char* suffix);
+#endif
 
     // Popups, Modals, Tooltips
     IMGUI_API bool          BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags);

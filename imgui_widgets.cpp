@@ -179,7 +179,9 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
 
         // Lines to skip (can't skip when logging text)
         ImVec2 pos = text_pos;
+#ifndef IMGUI_DISABLE_LOG
         if (!g.LogEnabled)
+#endif
         {
             int lines_skippable = (int)((window->ClipRect.Min.y - text_pos.y) / line_height);
             if (lines_skippable > 0)
@@ -701,9 +703,10 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogSetNextTextDecoration("[", "]");
+#endif
     RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
 
     // Automatically close popups
@@ -1118,8 +1121,10 @@ bool ImGui::Checkbox(const char* label, bool* v)
     }
 
     ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogRenderedText(&label_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
+#endif
     if (label_size.x > 0.0f)
         RenderText(label_pos, label);
 
@@ -1220,8 +1225,10 @@ bool ImGui::RadioButton(const char* label, bool active)
     }
 
     ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogRenderedText(&label_pos, active ? "(x)" : "( )");
+#endif
     if (label_size.x > 0.0f)
         RenderText(label_pos, label);
 
@@ -1381,8 +1388,10 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
 
         // Draw
         window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogText(" |");
+#endif
     }
     else if (flags & ImGuiSeparatorFlags_Horizontal)
     {
@@ -1406,8 +1415,10 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         {
             // Draw
             window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x, bb.Min.y), GetColorU32(ImGuiCol_Separator));
+#ifndef IMGUI_DISABLE_LOG
             if (g.LogEnabled)
                 LogRenderedText(&bb.Min, "--------------------------------\n");
+#endif
 
         }
         if (columns)
@@ -1603,8 +1614,10 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (preview_value != NULL && !(flags & ImGuiComboFlags_NoPreview))
     {
         ImVec2 preview_pos = frame_bb.Min + style.FramePadding;
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogSetNextTextDecoration("{", "}");
+#endif
         RenderTextClipped(preview_pos, ImVec2(value_x2, frame_bb.Max.y), preview_value, NULL, NULL, ImVec2(0.0f, 0.0f));
     }
     if (label_size.x > 0)
@@ -2384,8 +2397,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+#endif
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
 
     if (label_size.x > 0.0f)
@@ -3001,8 +3016,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+#endif
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
 
     if (label_size.x > 0.0f)
@@ -4235,6 +4252,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             state->SelectAll();
             state->CursorFollow = true;
         }
+#ifndef IMGUI_DISABLE_CLIPBOARD
         else if (is_cut || is_copy)
         {
             // Cut, Copy
@@ -4283,6 +4301,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 MemFree(clipboard_filtered);
             }
         }
+#endif
 
         // Update render selection flag after events have been handled, so selection highlight can be displayed during the same frame.
         render_selection |= state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
@@ -4664,11 +4683,13 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Log as text
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled && (!is_password || is_displaying_hint))
     {
         LogSetNextTextDecoration("{", "}");
         LogRenderedText(&draw_pos, buf_display, buf_display_end);
     }
+#endif
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -5510,6 +5531,7 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
 
     if (allow_opt_inputs || allow_opt_datatype)
         Separator();
+#ifndef IMGUI_DISABLE_CLIPBOARD
     if (Button("Copy as..", ImVec2(-1, 0)))
         OpenPopup("Copy");
     if (BeginPopup("Copy"))
@@ -5533,6 +5555,7 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
         }
         EndPopup();
     }
+#endif
 
     g.ColorEditOptions = opts;
     EndPopup();
@@ -5716,8 +5739,10 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
 
     // When logging is enabled, we automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
     // NB- If we are above max depth we still allow manually opened nodes to be logged.
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoOpenOnLog) && (window->DC.TreeDepth - g.LogDepthRef) < g.LogDepthToExpand)
         is_open = true;
+#endif
 
     return is_open;
 }
@@ -5880,9 +5905,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             text_pos.x -= text_offset_x;
         if (flags & ImGuiTreeNodeFlags_ClipLabelForTrailingButton)
             frame_bb.Max.x -= g.FontSize + style.FramePadding.x;
-
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogSetNextTextDecoration("###", "###");
+#endif
         RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
     }
     else
@@ -5898,8 +5924,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             RenderBullet(window->DrawList, ImVec2(text_pos.x - text_offset_x * 0.5f, text_pos.y + g.FontSize * 0.5f), text_col);
         else if (!is_leaf)
             RenderArrow(window->DrawList, ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.15f), text_col, is_open ? ImGuiDir_Down : ImGuiDir_Right, 0.70f);
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogSetNextTextDecoration(">", NULL);
+#endif
         RenderText(text_pos, label, label_end, false);
     }
 

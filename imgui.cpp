@@ -1100,9 +1100,11 @@ ImGuiIO::ImGuiIO()
     // Platform Functions
     BackendPlatformName = BackendRendererName = NULL;
     BackendPlatformUserData = BackendRendererUserData = BackendLanguageUserData = NULL;
+#ifndef IMGUI_DISABLE_CLIPBOARD
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
+#endif
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
     ImeWindowHandle = NULL;
 
@@ -2221,6 +2223,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
     {
         // If logging is active, do not perform any clipping
@@ -2228,6 +2231,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
         *out_items_display_end = items_count;
         return;
     }
+#endif
     if (GetSkipItemForListClipping())
     {
         *out_items_display_start = *out_items_display_end = 0;
@@ -2696,8 +2700,10 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     if (text != text_display_end)
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_display_end);
+#endif
     }
 }
 
@@ -2712,8 +2718,10 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     if (text != text_end)
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+#ifndef IMGUI_DISABLE_LOG
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
+#endif
     }
 }
 
@@ -2758,8 +2766,10 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     RenderTextClippedEx(window->DrawList, pos_min, pos_max, text, text_display_end, text_size_if_known, align, clip_rect);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogRenderedText(&pos_min, text, text_display_end);
+#endif
 }
 
 
@@ -2838,9 +2848,10 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
     {
         RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_full, &text_size, ImVec2(0.0f, 0.0f));
     }
-
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogRenderedText(&pos_min, text, text_end_full);
+#endif
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -3250,7 +3261,9 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged
     ImGuiWindow* window = g.CurrentWindow;
     if (!bb.Overlaps(window->ClipRect))
         if (id == 0 || (id != g.ActiveId && id != g.NavId))
+#ifndef IMGUI_DISABLE_LOG
             if (clip_even_when_logged || !g.LogEnabled)
+#endif
                 return true;
     return false;
 }
@@ -3351,6 +3364,7 @@ void ImGui::MemFree(void* ptr)
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
+#ifndef IMGUI_DISABLE_CLIPBOARD
 const char* ImGui::GetClipboardText()
 {
     ImGuiContext& g = *GImGui;
@@ -3363,6 +3377,7 @@ void ImGui::SetClipboardText(const char* text)
     if (g.IO.SetClipboardTextFn)
         g.IO.SetClipboardTextFn(g.IO.ClipboardUserData, text);
 }
+#endif // IMGUI_DISABLE_CLIPBOARD
 
 const char* ImGui::GetVersion()
 {
@@ -4227,13 +4242,15 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.TablesTempDataStack.clear();
     g.DrawChannelsTempMergeBuffer.clear();
 
+#ifndef IMGUI_DISABLE_CLIPBOARD
     g.ClipboardHandlerData.clear();
+#endif
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
 
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
-
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogFile)
     {
 #ifndef IMGUI_DISABLE_TTY_FUNCTIONS
@@ -4243,6 +4260,7 @@ void ImGui::Shutdown(ImGuiContext* context)
         g.LogFile = NULL;
     }
     g.LogBuffer.clear();
+#endif
 
     g.Initialized = false;
 }
@@ -5084,7 +5102,9 @@ void ImGui::EndChild()
             parent_window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
     }
     g.WithinEndChild = false;
+#ifndef IMGUI_DISABLE_LOG
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+#endif
 }
 
 // Helper to create a child window / scrolling region that looks like a normal widget frame.
@@ -6340,7 +6360,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
             IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0) // FIXME: Doesn't make sense for ChildWindow??
+#ifndef IMGUI_DISABLE_LOG
                 if (!g.LogEnabled)
+#endif
                     if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
                         window->HiddenFramesCanSkipItems = 1;
 
@@ -6399,8 +6421,10 @@ void ImGui::End()
     PopClipRect();   // Inner window clip rectangle
 
     // Stop logging
+#ifndef IMGUI_DISABLE_LOG
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
         LogFinish();
+#endif
 
     // Pop from window stack
     g.CurrentWindowStack.pop_back();
@@ -7747,8 +7771,10 @@ void ImGui::BeginGroup()
     window->DC.Indent = window->DC.GroupOffset;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+#endif
 }
 
 void ImGui::EndGroup()
@@ -7768,8 +7794,10 @@ void ImGui::EndGroup()
     window->DC.GroupOffset = group_data.BackupGroupOffset;
     window->DC.CurrLineSize = group_data.BackupCurrLineSize;
     window->DC.CurrLineTextBaseOffset = group_data.BackupCurrLineTextBaseOffset;
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+#endif
 
     if (!group_data.EmitItem)
     {
@@ -10076,6 +10104,7 @@ void ImGui::EndDragDropTarget()
     g.DragDropWithinTarget = false;
 }
 
+#ifndef IMGUI_DISABLE_LOG
 //-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
 //-----------------------------------------------------------------------------
@@ -10279,8 +10308,10 @@ void ImGui::LogFinish()
     case ImGuiLogType_Buffer:
         break;
     case ImGuiLogType_Clipboard:
+#ifndef IMGUI_DISABLE_CLIPBOARD
         if (!g.LogBuffer.empty())
             SetClipboardText(g.LogBuffer.begin());
+#endif
         break;
     case ImGuiLogType_None:
         IM_ASSERT(0);
@@ -10321,7 +10352,7 @@ void ImGui::LogButtons()
     if (log_to_clipboard)
         LogToClipboard();
 }
-
+#endif // IMGUI_DISABLE_LOG
 
 //-----------------------------------------------------------------------------
 // [SECTION] SETTINGS
@@ -10787,7 +10818,7 @@ static const char* GetClipboardTextFn_DefaultImpl(void*)
     return NULL;
 }
 
-#else
+#elif not(defined(IMGUI_DISABLE_CLIPBOARD))
 
 // Local Dear ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers.
 static const char* GetClipboardTextFn_DefaultImpl(void*)
