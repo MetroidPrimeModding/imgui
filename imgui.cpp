@@ -1470,6 +1470,48 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 }
 #endif // #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 
+#ifdef IMGUI_USE_FNV1A_HASH
+// FNV-1a avoids the 1KB CRC32 table. IDs differ from the CRC32 ones, which only matters if they're persisted (e.g. .ini).
+#define IM_FNV1A_OFFSET_BASIS 2166136261u
+#define IM_FNV1A_PRIME        16777619u
+
+ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed)
+{
+    ImU32 h = seed ^ IM_FNV1A_OFFSET_BASIS;
+    const unsigned char* data = (const unsigned char*)data_p;
+    while (data_size-- != 0)
+        h = (h ^ *data++) * IM_FNV1A_PRIME;
+    return h;
+}
+
+// Zero-terminated string hash, with support for ### to reset back to seed value (see the CRC32 version below)
+ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
+{
+    seed ^= IM_FNV1A_OFFSET_BASIS;
+    ImU32 h = seed;
+    const unsigned char* data = (const unsigned char*)data_p;
+    if (data_size != 0)
+    {
+        while (data_size-- != 0)
+        {
+            unsigned char c = *data++;
+            if (c == '#' && data_size >= 2 && data[0] == '#' && data[1] == '#')
+                h = seed;
+            h = (h ^ c) * IM_FNV1A_PRIME;
+        }
+    }
+    else
+    {
+        while (unsigned char c = *data++)
+        {
+            if (c == '#' && data[0] == '#' && data[1] == '#')
+                h = seed;
+            h = (h ^ c) * IM_FNV1A_PRIME;
+        }
+    }
+    return h;
+}
+#else
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
 // - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
@@ -1539,6 +1581,7 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
     }
     return ~crc;
 }
+#endif // #ifdef IMGUI_USE_FNV1A_HASH
 
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
@@ -3030,7 +3073,9 @@ void ImGui::GcCompactTransientMiscBuffers()
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
     g.GroupStack.clear();
+#ifndef IMGUI_DISABLE_TABLES
     TableGcCompactSettings();
+#endif
 }
 
 // Free up/compact internal window buffers, we can use this when a window becomes unused.
@@ -4073,6 +4118,7 @@ void ImGui::NewFrame()
             GcCompactTransientWindowBuffers(window);
     }
 
+#ifndef IMGUI_DISABLE_TABLES
     // Garbage collect transient buffers of recently unused tables
     for (int i = 0; i < g.TablesLastTimeActive.Size; i++)
         if (g.TablesLastTimeActive[i] >= 0.0f && g.TablesLastTimeActive[i] < memory_compact_start_time)
@@ -4080,6 +4126,7 @@ void ImGui::NewFrame()
     for (int i = 0; i < g.TablesTempDataStack.Size; i++)
         if (g.TablesTempDataStack[i].LastTimeActive >= 0.0f && g.TablesTempDataStack[i].LastTimeActive < memory_compact_start_time)
             TableGcCompactTransientBuffers(&g.TablesTempDataStack[i]);
+#endif
     if (g.GcCompactAll)
         GcCompactTransientMiscBuffers();
     g.GcCompactAll = false;
@@ -4141,6 +4188,7 @@ void ImGui::Initialize(ImGuiContext* context)
     ImGuiContext& g = *context;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
 
+#ifndef IMGUI_DISABLE_INI_SETTINGS
     // Add .ini handle for ImGuiWindow type
     {
         ImGuiSettingsHandler ini_handler;
@@ -4153,9 +4201,12 @@ void ImGui::Initialize(ImGuiContext* context)
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
         g.SettingsHandlers.push_back(ini_handler);
     }
+#endif
 
+#ifndef IMGUI_DISABLE_TABLES
     // Add .ini handle for ImGuiTable type
     TableSettingsInstallHandler(context);
+#endif
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -4183,6 +4234,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     if (!g.Initialized)
         return;
 
+#ifndef IMGUI_DISABLE_INI_SETTINGS
     // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
     if (g.SettingsLoaded && g.IO.IniFilename != NULL)
     {
@@ -4191,6 +4243,7 @@ void ImGui::Shutdown(ImGuiContext* context)
         SaveIniSettingsToDisk(g.IO.IniFilename);
         SetCurrentContext(backup_context);
     }
+#endif
 
     CallContextHooks(&g, ImGuiContextHookType_Shutdown);
 
@@ -4515,9 +4568,11 @@ void ImGui::Render()
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
 
+#ifndef IMGUI_DISABLE_MOUSE_CURSOR
         // Draw software mouse cursor if requested by io.MouseDrawCursor flag
         if (g.IO.MouseDrawCursor)
             RenderMouseCursor(GetForegroundDrawList(viewport), g.IO.MousePos, g.Style.MouseCursorScale, g.MouseCursor, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32(0, 0, 0, 48));
+#endif
 
         // Add foreground ImDrawList (for each active viewport)
         if (viewport->DrawLists[1] != NULL)
@@ -5148,6 +5203,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
 
+#ifndef IMGUI_DISABLE_INI_SETTINGS
     // User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
         if (ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID))
@@ -5157,6 +5213,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
             SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
             ApplyWindowSettings(window, settings);
         }
+#endif
     window->DC.CursorStartPos = window->DC.CursorMaxPos = window->Pos; // So first call to CalcContentSize() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
@@ -6393,9 +6450,11 @@ void ImGui::End()
     if (window->Flags & ImGuiWindowFlags_ChildWindow)
         IM_ASSERT_USER_ERROR(g.WithinEndChild, "Must call EndChild() and not End()!");
 
+#ifndef IMGUI_DISABLE_TABLES
     // Close anything that is open
     if (window->DC.CurrentColumns)
         EndColumns();
+#endif
     PopClipRect();   // Inner window clip rectangle
 
     // Stop logging
@@ -10343,6 +10402,7 @@ void ImGui::LogButtons()
 // Called by NewFrame()
 void ImGui::UpdateSettings()
 {
+#ifndef IMGUI_DISABLE_INI_SETTINGS
     // Load settings on first frame (if not explicitly loaded manually before)
     ImGuiContext& g = *GImGui;
     if (!g.SettingsLoaded)
@@ -10366,6 +10426,7 @@ void ImGui::UpdateSettings()
             g.SettingsDirtyTimer = 0.0f;
         }
     }
+#endif
 }
 
 void ImGui::MarkIniSettingsDirty()

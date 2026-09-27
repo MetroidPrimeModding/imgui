@@ -696,6 +696,13 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _IdxWritePtr += 6;
 }
 
+// IMGUI_DISABLE_ANTIALIASING compiles out the anti-aliased paths; the style's AntiAliased* settings are then ignored.
+#ifdef IMGUI_DISABLE_ANTIALIASING
+#define IM_DRAWLIST_ANTIALIASING            false
+#else
+#define IM_DRAWLIST_ANTIALIASING            true
+#endif
+
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
 // Those macros expects l-values.
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     do { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrt(d2); VX *= inv_len; VY *= inv_len; } } while (0)
@@ -714,7 +721,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
 
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (IM_DRAWLIST_ANTIALIASING && (Flags & ImDrawListFlags_AntiAliasedLines))
     {
         // Anti-aliased stroke
         const float AA_SIZE = _FringeScale;
@@ -967,7 +974,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
 
-    if (Flags & ImDrawListFlags_AntiAliasedFill)
+    if (IM_DRAWLIST_ANTIALIASING && (Flags & ImDrawListFlags_AntiAliasedFill))
     {
         // Anti-aliased Fill
         const float AA_SIZE = _FringeScale;
@@ -1380,7 +1387,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (IM_DRAWLIST_ANTIALIASING && (Flags & ImDrawListFlags_AntiAliasedLines))
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
     else
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
