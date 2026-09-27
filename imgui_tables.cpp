@@ -191,10 +191,6 @@ Index of this file:
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((section(".imgui.text"))), apply_to=function)
-#endif
-
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -1727,8 +1723,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
         TableEndCell(table);
 
     // Logging
+#ifndef IMGUI_DISABLE_LOG
     if (g.LogEnabled)
         LogRenderedText(NULL, "|");
+#endif
 
     // Position cursor at the bottom of our row so it can be used for e.g. clipping calculation. However it is
     // likely that the next call to TableBeginCell() will reposition the cursor to take account of vertical padding.
@@ -1967,6 +1965,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         table->DrawSplitter->SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
     }
 
+#ifndef IMGUI_DISABLE_LOG
     // Logging
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled && !column->IsSkipItems)
@@ -1974,6 +1973,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         LogRenderedText(&window->DC.CursorPos, "|");
         g.LogLinePosY = FLT_MAX;
     }
+#endif
 }
 
 // [Internal] Called by TableNextRow()/TableSetColumnIndex()/TableNextColumn()
@@ -4028,10 +4028,5 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 }
 
 //-------------------------------------------------------------------------
-
-#if defined(__clang__)
-#pragma clang attribute pop
-#endif
-
 
 #endif // #ifndef IMGUI_DISABLE
